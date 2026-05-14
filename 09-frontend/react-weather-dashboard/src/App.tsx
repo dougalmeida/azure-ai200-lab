@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useWeather from './hooks/useWeather';
 import WeatherCard from './components/WeatherCard';
+import CitySearch from './components/CitySearch';
 
 function App() {
   const { forecasts, loading, error } = useWeather(
@@ -21,7 +22,6 @@ function App() {
           marginBottom: '0.75rem',
           backgroundColor: '#f1f5f9',
           height: '80px',
-          animation: 'pulse 1.5s infinite'
         }} />
       ))}
     </div>
@@ -30,15 +30,7 @@ function App() {
   if (error) return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
       <h1>🌤 Weather Dashboard</h1>
-      <div style={{
-        backgroundColor: '#fef2f2',
-        border: '1px solid #fecaca',
-        borderRadius: '8px',
-        padding: '1rem',
-        color: '#dc2626'
-      }}>
-        ⚠️ Error: {error}
-      </div>
+      <p style={{ color: 'red' }}>Error: {error}</p>
     </div>
   );
 
@@ -46,7 +38,12 @@ function App() {
     <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '600px' }}>
       <h1>🌤 Weather Dashboard</h1>
 
-      {/* Filter */}
+      {/* City Search */}
+      <CitySearch />
+
+      <hr style={{ margin: '2rem 0', borderColor: '#e2e8f0' }} />
+
+      {/* Temperature filter */}
       <div style={{
         backgroundColor: '#f8fafc',
         border: '1px solid #e2e8f0',
@@ -57,9 +54,7 @@ function App() {
         alignItems: 'center',
         gap: '1rem'
       }}>
-        <label style={{ fontWeight: 'bold', color: '#1e293b' }}>
-          Min temperature :
-        </label>
+        <label style={{ fontWeight: 'bold' }}>Min temperature :</label>
         <input
           type="range"
           min={-20}
@@ -68,35 +63,17 @@ function App() {
           onChange={e => setMinTemp(Number(e.target.value))}
           style={{ flex: 1 }}
         />
-        <span style={{
-          fontWeight: 'bold',
-          color: '#2563eb',
-          minWidth: '50px'
-        }}>
-          {minTemp}°C
-        </span>
+        <span style={{ fontWeight: 'bold', color: '#2563eb' }}>{minTemp}°C</span>
       </div>
 
-      {/* Results count */}
       <p style={{ color: '#64748b', marginBottom: '1rem' }}>
         Showing {filtered.length} of {forecasts.length} forecasts
       </p>
 
-      {/* Cards */}
       {filtered.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '2rem',
-          color: '#94a3b8',
-          border: '1px dashed #e2e8f0',
-          borderRadius: '8px'
-        }}>
-          No forecasts match your filter
-        </div>
+        <p style={{ color: '#94a3b8' }}>No forecasts match your filter</p>
       ) : (
-        filtered.map((f, i) => (
-          <WeatherCard key={i} forecast={f} />
-        ))
+        filtered.map((f, i) => <WeatherCard key={i} forecast={f} />)
       )}
     </div>
   );
