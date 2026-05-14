@@ -1,24 +1,39 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useState, useEffect } from 'react';
+
+interface WeatherForecast {
+  date: string;
+  temperatureC: number;
+  temperatureF: number;
+  summary: string;
+}
 
 function App() {
+  const [forecasts, setForecasts] = useState<WeatherForecast[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/weatherforecast')
+      .then(res => res.json())
+      .then(data => {
+        setForecasts(data);
+        setLoading(false);
+      });
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+      <h1>Weather Dashboard</h1>
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <ul>
+          {forecasts.map((f, i) => (
+            <li key={i}>
+              {f.date} — {f.temperatureC}°C — {f.summary}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
