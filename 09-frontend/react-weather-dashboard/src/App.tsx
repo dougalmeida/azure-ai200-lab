@@ -1,39 +1,21 @@
-import { useState, useEffect } from 'react';
-
-interface WeatherForecast {
-  date: string;
-  temperatureC: number;
-  temperatureF: number;
-  summary: string;
-}
+import useWeather from './hooks/useWeather';
+import WeatherCard from './components/WeatherCard';
 
 function App() {
-  const [forecasts, setForecasts] = useState<WeatherForecast[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { forecasts, loading, error } = useWeather(
+    'http://localhost:5000/weatherforecast'
+  );
 
-  useEffect(() => {
-    fetch('http://localhost:5000/weatherforecast')
-      .then(res => res.json())
-      .then(data => {
-        setForecasts(data);
-        setLoading(false);
-      });
-  }, []);
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>Weather Dashboard</h1>
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <ul>
-          {forecasts.map((f, i) => (
-            <li key={i}>
-              {f.date} — {f.temperatureC}°C — {f.summary}
-            </li>
-          ))}
-        </ul>
-      )}
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '600px' }}>
+      <h1>🌤 Weather Dashboard</h1>
+      <p style={{ color: '#64748b' }}>{forecasts.length} forecasts loaded</p>
+      {forecasts.map((f, i) => (
+        <WeatherCard key={i} forecast={f} />
+      ))}
     </div>
   );
 }
