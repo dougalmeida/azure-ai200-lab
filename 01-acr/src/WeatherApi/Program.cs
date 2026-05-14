@@ -1,99 +1,96 @@
-var builder = WebApplication.CreateBuilder(args);
+using WeatherApi.DTOs;
+using System.Net.Http.Json;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReact", policy =>
-    {
-        policy.WithOrigins("http://localhost:3000")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
-
-
-builder.Services.AddHttpClient();
-
-var app = builder.Build();
-
-app.UseCors("AllowReact");
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-app.MapGet("/cityweather", async (string city, IHttpClientFactory httpClientFactory) =>
+app.MapGet("/cityweather", async (
+    string? city,
+    double? lat,
+    double? lng,
+    IHttpClientFactory httpClientFactory) =>
 {
     var client = httpClientFactory.CreateClient();
 
-    // Step 1 — Geocoding : city name → coordinates
-    var geoUrl = $"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1";
-    var geoResponse = await client.GetFromJsonAsync<GeocodingResponse>(geoUrl);
+    double latitude;
+    double longitude;
+    string cityName;
+    string country;
 
-    if (geoResponse?.Results == null || geoResponse.Results.Length == 0)
-        return Results.NotFound($"City '{city}' not found");
+    if (lat.HasValue && lng.HasValue)
+    {
+        // Coordinates provided — reverse geocode to get city name
+        latitude = lat.Value;
+        longitude = lng.Value;
 
-    var location = geoResponse.Results[0];
+        var reverseUrl = string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            "https://nominatim.openstreetmap.org/reverse" +
+            "?lat={0}&lon={1}&format=json",
+            latitude, longitude
+        );
 
-    // Step 2 — Weather : coordinates → current weather
+        var reverseClient = httpClientFactory.CreateClient();
+        reverseClient.DefaultRequestHeaders.Add(
+            "User-Agent", "AzureAI200Lab/1.0"
+        );
+
+        var reverseResponse = await reverseClient
+            .GetFromJsonAsync<NominatimResponse>(reverseUrl);
+
+        cityName = reverseResponse?.Address?.City
+            ?? reverseResponse?.Address?.Town
+            ?? reverseResponse?.Address?.Village
+            ?? "Unknown";
+        country = reverseResponse?.Address?.Country ?? "";
+    }
+    else if (!string.IsNullOrEmpty(city))
+    {
+        // City name provided — geocode to get coordinates
+        var geoUrl = $"https://geocoding-api.open-meteo.com/v1/search" +
+                     $"?name={city}&count=1";
+        var geoResponse = await client
+            .GetFromJsonAsync<GeocodingResponse>(geoUrl);
+
+        if (geoResponse?.Results == null || geoResponse.Results.Length == 0)
+            return Results.NotFound($"City '{city}' not found");
+
+        var location = geoResponse.Results[0];
+        latitude = location.Latitude;
+        longitude = location.Longitude;
+        cityName = location.Name;
+        country = location.Country;
+    }
+    else
+    {
+        return Results.BadRequest("Provide either city or lat/lng");
+    }
+
+    // Fetch weather for coordinates
     var weatherUrl = string.Format(
         System.Globalization.CultureInfo.InvariantCulture,
         "https://api.open-meteo.com/v1/forecast" +
         "?latitude={0}&longitude={1}" +
-        "&current=temperature_2m,windspeed_10m,weathercode" +
-        "&timezone=auto",
-        location.Latitude,
-        location.Longitude
+        "&daily=temperature_2m_max,temperature_2m_min,weathercode,windspeed_10m_max" +
+        "&timezone=auto&forecast_days=5",
+        latitude, longitude
     );
 
-    var weatherResponse = await client.GetFromJsonAsync<OpenMeteoResponse>(weatherUrl);
+    var weatherResponse = await client
+        .GetFromJsonAsync<OpenMeteoResponse>(weatherUrl);
 
-    if (weatherResponse?.Current == null)
+    if (weatherResponse?.Daily == null)
         return Results.Problem("Could not fetch weather data");
 
-    // Step 3 — Return clean DTO
-    var result = new CityWeatherDto(
-        City: location.Name,
-        Country: location.Country,
-        Latitude: location.Latitude,
-        Longitude: location.Longitude,
-        TemperatureC: weatherResponse.Current.Temperature,
-        WindSpeedKmh: weatherResponse.Current.WindSpeed
-    );
+    var forecasts = Enumerable.Range(0, 5).Select(i => new CityWeatherDto(
+        City: cityName,
+        Country: country,
+        Latitude: latitude,
+        Longitude: longitude,
+        Date: weatherResponse.Daily.Time[i],
+        TemperatureMax: weatherResponse.Daily.TemperatureMax[i],
+        TemperatureMin: weatherResponse.Daily.TemperatureMin[i],
+        WindSpeedKmh: weatherResponse.Daily.WindSpeedMax[i]
+    )).ToList();
 
-    return Results.Ok(result);
+    return Results.Ok(forecasts);
 })
 .WithName("GetCityWeather");
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
