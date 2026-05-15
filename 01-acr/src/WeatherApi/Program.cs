@@ -1,6 +1,10 @@
 using WeatherApi.DTOs;
 using System.Net.Http.Json;
 
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpClient();
+var app = builder.Build();
+
 app.MapGet("/cityweather", async (
     string? city,
     double? lat,
@@ -94,3 +98,4 @@ app.MapGet("/cityweather", async (
 })
 .WithName("GetCityWeather");
 
+app.Run();
