@@ -1,21 +1,23 @@
 import useFetch from './useFetch';
 
-interface CityWeather {
+export interface CityWeather {
   city: string;
   country: string;
   latitude: number;
   longitude: number;
-  temperatureC: number;
+  date: string;
+  temperatureMax: number;
+  temperatureMin: number;
   windSpeedKmh: number;
 }
 
 function useCityWeather(city: string | null) {
   const url = city
-    ? `http://localhost:5000/cityweather?city=${city}`
+    ? `http://localhost:5000/cityweather?city=${encodeURIComponent(city)}`
     : null;
 
-  const { data, loading, error } = useFetch<CityWeather>(url);
-  return { weather: data, loading, error };
+  const { data, loading, error } = useFetch<CityWeather[]>(url);
+  return { forecasts: data ?? [], loading, error };
 }
 
 export default useCityWeather;

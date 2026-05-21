@@ -1,12 +1,7 @@
-interface WeatherForecast {
-  date: string;
-  temperatureC: number;
-  temperatureF: number;
-  summary: string;
-}
+import { CityWeather } from '../hooks/useCityWeather';
 
 interface Props {
-  forecast: WeatherForecast;
+  forecast: CityWeather;
 }
 
 function WeatherCard({ forecast }: Props) {
@@ -18,9 +13,11 @@ function WeatherCard({ forecast }: Props) {
       marginBottom: '0.75rem',
       backgroundColor: '#f8fafc'
     }}>
-      <p><strong>Date:</strong> {forecast.date}</p>
-      <p><strong>Temperature:</strong> {forecast.temperatureC}°C / {forecast.temperatureF}°F</p>
-      <p><strong>Summary:</strong> {forecast.summary}</p>
+      <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+        {new Date(forecast.date).toLocaleDateString('en', { weekday: 'long', month: 'short', day: 'numeric' })}
+      </p>
+      <p>🌡 {forecast.temperatureMin}°C – {forecast.temperatureMax}°C</p>
+      <p>💨 {forecast.windSpeedKmh} km/h</p>
     </div>
   );
 }

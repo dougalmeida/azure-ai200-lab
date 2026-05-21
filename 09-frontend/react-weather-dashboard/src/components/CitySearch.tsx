@@ -1,36 +1,35 @@
 import { useState } from 'react';
-import useCityWeather from '../hooks/useCityWeather';
 
-function CitySearch() {
+interface Props {
+  onSearch: (city: string) => void;
+}
+
+function CitySearch({ onSearch }: Props) {
   const [input, setInput] = useState('');
-  const [searchCity, setSearchCity] = useState<string | null>(null);
-
-  const { weather, loading, error } = useCityWeather(searchCity);
 
   const handleSearch = () => {
-    if (input.trim()) setSearchCity(input.trim());
+    if (input.trim()) onSearch(input.trim());
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
   };
 
   return (
-    <div>
+    <div style={{ display: 'flex', gap: '0.5rem' }}>
       <input
         value={input}
         onChange={e => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="Search city..."
+        style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
       />
-      <button onClick={handleSearch}>Search</button>
-
-      {loading && <p>Loading...</p>}
-
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {weather && (
-        <div>
-          <h3>{weather.city}, {weather.country}</h3>
-          <p>🌡 {weather.temperatureC}°C</p>
-          <p>💨 {weather.windSpeedKmh} km/h</p>
-        </div>
-      )}
+      <button
+        onClick={handleSearch}
+        style={{ padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+      >
+        Search
+      </button>
     </div>
   );
 }
